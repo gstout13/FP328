@@ -4,12 +4,12 @@ const cors = require('cors');
 
 // Create an Express application
 const app = express();
-
-// Define CORS options
 let corsOptions = {
-    origin: ['https://localhost', 'https://www.github.io', 'https://jakobzhao.github.io'],
+    origin: ['https://127.0.0.1:5500', 'https://www.github.io', 'https://gstout13.github.io'],
     optionsSuccessStatus: 200
-}
+    }
+// Define CORS options
+
 
 // Enable CORS for the application using the defined options
 app.use(cors(corsOptions));
