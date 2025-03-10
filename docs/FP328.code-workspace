@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"name": "FP328",
+			"path": "../../../Documents/GitHub/FP328"
+		},
+		{
+			"name": "docs",
+			"path": "."
+		},
+		{
+			"name": "node_modules",
+			"path": "../node_modules"
+		},
+		{
+			"name": "src",
+			"path": "../src"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "FP328"
+	}
+}
