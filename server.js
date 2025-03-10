@@ -1,7 +1,7 @@
 // Import the 'app' module from the './src/app' file
 
 let corsOptions = {
-  origin: ['https://127.0.0.1:5500', 'https://www.github.io', 'https://jakobzhao.github.io'],
+  origin: ['https://127.0.0.1:5500', 'https://www.github.io', 'https://gstout13.github.io'],
   optionsSuccessStatus: 200
   }
 const app = require('./src/app');
