@@ -309,6 +309,7 @@
           id: 'heatmapLayer',
           type: 'heatmap',
           source: 'heatmap',
+          minizoom: 7,
           maxzoom: 15,
           paint: {
             'heatmap-weight': 1, // Constant weight; overlaps stack via density
@@ -331,14 +332,15 @@
 
   map.addLayer({
     'id': 'places-layer',
-    'type': 'symbol',
+    'type': 'circle',
     'source': 'places',
+    minizoom: 7,
     'layout': {
-        'icon-image': 'marker-15', // Reference to an icon in the sprite
-        'icon-size': 1.5,
-        'text-field': ['get', 'title'],
-        'text-offset': [0, 1.25],
-        'text-anchor': 'top'
+        'circle-color': '#B42222',
+        'circle-radius': 4,
+        'circle-stroke-width': 1,
+        'circle-stroke-color': '#000000',
+        'circle-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0, 8, 1]
     }
 });
 
