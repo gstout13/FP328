@@ -349,6 +349,7 @@
     map.on('zoom', function () {
       if (map.getZoom() > 13 && popup) {
         popup.remove();
+        popup = null;
       }
     });
   </script>
