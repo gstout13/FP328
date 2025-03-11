@@ -309,7 +309,6 @@
           id: 'heatmapLayer',
           type: 'heatmap',
           source: 'heatmap',
-          minizoom: 7,
           maxzoom: 15,
           paint: {
             'heatmap-weight': 1, // Constant weight; overlaps stack via density
@@ -332,15 +331,14 @@
 
   map.addLayer({
     'id': 'places-layer',
-    'type': 'circle',
+    'type': 'symbol',
     'source': 'places',
-    minizoom: 7,
     'layout': {
-        'circle-color': '#B42222',
-        'circle-radius': 4,
-        'circle-stroke-width': 1,
-        'circle-stroke-color': '#000000',
-        'circle-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0, 8, 1]
+        'icon-image': 'marker-15', // Reference to an icon in the sprite
+        'icon-size': 1.5,
+        'text-field': ['get', 'title'],
+        'text-offset': [0, 1.25],
+        'text-anchor': 'top'
     }
 });
 
@@ -539,52 +537,16 @@
       }
 
       // Add a marker with a popup
-      // Pop-up on existing points (disappears above zoom 13)
-        map.on('click', 'places-layer', (e) => {
-          if (map.getZoom() > 13) return; // No pop-up if zoom > 13
-          const { description, location } = e.features[0].properties;
-          const coordinates = e.features[0].geometry.coordinates.slice();
-          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-          }
-          popup = new maplibregl.Popup()
-            .setLngLat(coordinates)
-            .setHTML(`<p><b>${location || 'Unknown'}</b>: ${description || 'No description'}</p>`)
-            .addTo(map);
-        });
-      });
+      var marker = new maplibregl.Marker()
+        .setLngLat([longitude, latitude]) // Replace with your coordinates
+        .setPopup(new maplibregl.Popup({ offset: 25 }) // add popups
+          .setHTML('<h3>Description</h3><p>Location data</p>')) // Replace with your description and location data
+        .addTo(map);
 
-      // Add new point with pop-up (disappears above zoom 13)
-      map.on('click', (e) => {
-        if (map.getZoom() > 13) return; // No pop-up if zoom > 13
-        if (popup) popup.remove();
-        popup = new maplibregl.Popup({ closeOnClick: true })
-          .setLngLat(e.lngLat)
-          .setHTML('<div id="popup"><input type="text" id="description" placeholder="Description"><input type="text" id="location" placeholder="Location"><button id="submit">Submit</button></div>')
-          .addTo(map);
-        document.getElementById('submit').addEventListener('click', () => {
-          const description = document.getElementById('description').value;
-          const location = document.getElementById('location').value;
-          geojson.features.push({
-            type: 'Feature',
-            properties: { description, location },
-            geometry: { type: 'Point', coordinates: [e.lngLat.lng, e.lngLat.lat] }
-          });
-          map.getSource('heatmap').setData(geojson);
-          map.getSource('places').setData(geojson);
-          popup.remove();
-          popup = null;
-        });
-      });
-
-      // Close pop-up when zooming past 13
-      map.on('zoom', () => {
-        if (map.getZoom() > 13 && popup) {
-          popup.remove();
-          popup = null;
-        }
-      });
-    });
+      // Show popup on click over an existing point
+      map.on('click', 'places-layer', function (e) {
+        var coordinates = e.features[0].geometry.coordinates.slice();
+        var description = e.features[0].properties.description;
 
         // Ensure that if the map is zoomed out such that multiple
         // copies of the feature are visible, the popup appears
