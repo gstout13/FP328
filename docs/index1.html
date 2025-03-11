@@ -336,13 +336,25 @@
   });
 
   // Change the cursor to a pointer when the mouse is over the placesLayer
-  map.on('mouseenter', 'placesLayer', function () {
+  map.on('mouseenter', 'placesLayer', function (e) {
     map.getCanvas().style.cursor = 'pointer';
+    const coordinates = e.features[0].geometry.coordinates;
+    const content = e.features[0].properties.content;
+    const contributor = e.features[0].properties.contributor;
+    const datetime = e.features[0].properties.datetime;
+    popup = new maplibregl.Popup({ closeOnClick: true })
+      .setLngLat(coordinates)
+      .setHTML("<p><b>" + contributor + "</b> <i>said:</i> " + content + "<br><small>" + datetime + "</small></p>")
+      .addTo(map);
   });
 
   // Change it back to a pointer when it leaves.
   map.on('mouseleave', 'placesLayer', function () {
     map.getCanvas().style.cursor = '';
+    if (popup) {
+      popup.remove();
+      popup = null;
+    }
   });
 });
 
