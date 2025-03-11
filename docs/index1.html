@@ -440,56 +440,84 @@
 
     // Function to submit a new record
     async function submitNewRecord() {
-      const contributor = document.getElementById('location').value;
-      const content = document.getElementById('description').value;
-      // If datetime is not provided, use the current date/time in ISO format
-      let datetimeInput = document.getElementById('datetime').value;
-      if (!datetimeInput) {
-        datetimeInput = new Date().toISOString();
-      }
-      const lngLat = popup.getLngLat();
-      const newRecord = new URLSearchParams();
-      newRecord.append('contributor', contributor);
-      newRecord.append('content', content);
-      newRecord.append('datetime', datetimeInput);
-      newRecord.append('lng', lngLat.lng);
-      newRecord.append('lat', lngLat.lat);
+  const contributor = document.getElementById('location').value; // Note: Using 'location' as 'contributor'
+  const content = document.getElementById('description').value;
+  let datetimeInput = document.getElementById('datetime').value || new Date().toISOString();
+  const lngLat = popup.getLngLat();
 
-      const settings = {
-        method: 'POST',
-        body: newRecord
-      };
+  const newRecord = new URLSearchParams();
+  newRecord.append('contributor', contributor);
+  newRecord.append('content', content);
+  newRecord.append('datetime', datetimeInput);
+  newRecord.append('lng', lngLat.lng);
+  newRecord.append('lat', lngLat.lat);
 
-      try {
-        await fetch('https://finalproject328-8bfb306704ea.herokuapp.com/api/add-record', settings);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        popup.remove();
-        popup = null;
-        // Add the new record to geojson
-        geojson.features.push({
-          type: 'Feature',
-          properties: {
-            contributor: contributor,
-            content: content,
-            datetime: datetimeInput
-          },
-          geometry: {
-            type: 'Point',
-            coordinates: [lngLat.lng, lngLat.lat]
-          }
-        });
-        map.getSource('places').setData(geojson);
-        map.getSource('heatmap').setData(geojson);
-        updateVisibleTable();
+  const settings = { method: 'POST', body: newRecord };
+
+  try {
+    const response = await fetch('https://finalproject328-8bfb306704ea.herokuapp.com/api/add-record', settings);
+    if (!response.ok) throw new Error('Failed to save record');
+  } catch (err) {
+    console.error('Error saving record:', err);
+  } finally {
+    popup.remove();
+    popup = null;
+
+    // Add the new feature to geojson
+    const newFeature = {
+      type: 'Feature',
+      properties: {
+        contributor: contributor,
+        content: content,
+        datetime: datetimeInput
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [lngLat.lng, lngLat.lat]
       }
+    };
+    geojson.features.push(newFeature);
+
+    // Update map sources
+    if (map.getSource('places')) map.getSource('places').setData(geojson);
+    if (map.getSource('heatmap')) map.getSource('heatmap').setData(geojson);
+
+    // Update the table
+    updateVisibleTable();
+  }
+}
+```
+
+- Ensure `updateVisibleTable()` correctly uses the property names:
+```javascript
+function updateVisibleTable() {
+  const bounds = map.getBounds();
+  const tableBody = document.getElementById('contribution-table').getElementsByTagName('tbody')[0];
+  tableBody.innerHTML = ""; // Clear existing rows
+
+  geojson.features.forEach(feature => {
+    const coords = feature.geometry.coordinates;
+    const point = { lng: coords[0], lat: coords[1] };
+    if (bounds.contains(point) && feature.properties.contributor && feature.properties.content) {
+      const newRow = document.createElement('tr');
+
+      const locationCell = document.createElement('td');
+      locationCell.textContent = feature.properties.contributor; // Matches 'contributor'
+      newRow.appendChild(locationCell);
+
+      const descriptionCell = document.createElement('td');
+      descriptionCell.textContent = feature.properties.content; // Matches 'content'
+      newRow.appendChild(descriptionCell);
+
+      const dateTimeCell = document.createElement('td');
+      dateTimeCell.textContent = feature.properties.datetime || 'N/A';
+      newRow.appendChild(dateTimeCell);
+
+      tableBody.appendChild(newRow);
     }
-
-    // Add a heatmap layer
-    map.on('load', function () {
-      map.addSource('heatmap', {
-        type: 'geojson',
+  });
+}
+    type: 'geojson',
         data: geojson
       });
 
