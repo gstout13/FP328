@@ -38,7 +38,7 @@
       padding: 10px;
     }
     /* Style inputs */
-    #name, #content, #datetime {
+    #description, #location {
       width: 100%;
       margin-bottom: 10px;
       box-sizing: border-box;
@@ -185,6 +185,40 @@
                 .setLngLat(coordinates)
                 .setHTML("<p><b>Description:</b> " + description + "<br><b>Location:</b> " + location + "</p>")
                 .addTo(map);
+
+              // Add the clicked feature to the table
+              const tableBody = document.getElementById('contribution-table').getElementsByTagName('tbody')[0];
+              const newRow = document.createElement('tr');
+
+              const locationCell = document.createElement('td');
+              locationCell.textContent = location;
+              newRow.appendChild(locationCell);
+
+              const descriptionCell = document.createElement('td');
+              descriptionCell.textContent = description;
+              newRow.appendChild(descriptionCell);
+
+              const dateTimeCell = document.createElement('td');
+              dateTimeCell.textContent = new Date().toISOString(); // Use current date/time
+              newRow.appendChild(dateTimeCell);
+
+              tableBody.appendChild(newRow);
+
+              // Store the clicked feature to the server
+              const newRecord = new URLSearchParams();
+              newRecord.append('contributor', location);
+              newRecord.append('content', description);
+              newRecord.append('datetime', new Date().toISOString());
+              newRecord.append('lng', coordinates[0]);
+              newRecord.append('lat', coordinates[1]);
+
+              const settings = {
+                method: 'POST',
+                body: newRecord
+              };
+
+              fetch('https://finalproject328-8bfb306704ea.herokuapp.com/api/add-record', settings)
+                .catch(err => console.error(err));
             });
 
             // Change the cursor to a pointer when the mouse is over the places-layer
@@ -387,8 +421,8 @@
         popup = null;
       }
       const popupContent = '<div id="popup">' +
-                           '<input type="text" id="name" placeholder="Input your location here...">' +
-                           '<input type="text" id="content" placeholder="Input your message here...">' +
+                           '<input type="text" id="description" placeholder="Input description here...">' +
+                           '<input type="text" id="location" placeholder="Input location here...">' +
                            '<input type="datetime-local" id="datetime">' +
                            '<button id="submit">submit</button></div>';
       popup = new maplibregl.Popup({ closeOnClick: true })
@@ -406,8 +440,8 @@
 
     // Function to submit a new record
     async function submitNewRecord() {
-      const contributor = document.getElementById('name').value;
-      const content = document.getElementById('content').value;
+      const contributor = document.getElementById('location').value;
+      const content = document.getElementById('description').value;
       // If datetime is not provided, use the current date/time in ISO format
       let datetimeInput = document.getElementById('datetime').value;
       if (!datetimeInput) {
@@ -525,6 +559,24 @@
           .setLngLat(coordinates)
           .setHTML("<p>" + description + "</p>")
           .addTo(map);
+
+        // Add the clicked feature to the table
+        const tableBody = document.getElementById('contribution-table').getElementsByTagName('tbody')[0];
+        const newRow = document.createElement('tr');
+
+        const locationCell = document.createElement('td');
+        locationCell.textContent = location;
+        newRow.appendChild(locationCell);
+
+        const descriptionCell = document.createElement('td');
+        descriptionCell.textContent = description;
+        newRow.appendChild(descriptionCell);
+
+        const dateTimeCell = document.createElement('td');
+        dateTimeCell.textContent = new Date().toISOString(); // Use current date/time
+        newRow.appendChild(dateTimeCell);
+
+        tableBody.appendChild(newRow);
       });
 
       // Change the cursor to a pointer when the mouse is over the places-layer
