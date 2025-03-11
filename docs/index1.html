@@ -363,6 +363,19 @@
       coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
     }
 
+    var popup = new maplibregl.Popup()
+    .setLngLat(coordinates)
+    .setHTML("<p><b>" + contributor + "</b> <i>said:</i> " + content + "</p>")
+    .addTo(map);
+
+  // Monitor zoom level
+    map.on('zoom', function () {
+      var zoomLevel = map.getZoom();  // Get the current zoom level
+      if (zoomLevel > 13) {
+        popup.remove();  // Remove popup when zoom level exceeds 13
+      }
+    });
+
     new maplibregl.Popup()
       .setLngLat(coordinates)
       .setHTML("<p><b>" + contributor + "</b> <i>said:</i> " + content + "</p>")
