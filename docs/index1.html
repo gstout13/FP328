@@ -217,6 +217,13 @@
       'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 7, 1, 15, 0]
     }
   });
+
+  // Add a marker with a popup
+  var marker = new maplibregl.Marker()
+    .setLngLat([longitude, latitude]) // Replace with your coordinates
+    .setPopup(new maplibregl.Popup({ offset: 25 }) // add popups
+      .setHTML('<h3>Description</h3><p>Location data</p>')) // Replace with your description and location data
+    .addTo(map);
 });
 
     // Show popup on mouseenter over existing points
@@ -343,6 +350,13 @@
           'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 7, 1, 15, 0]
         }
       });
+
+      // Add a marker with a popup
+      var marker = new maplibregl.Marker()
+        .setLngLat([longitude, latitude]) // Replace with your coordinates
+        .setPopup(new maplibregl.Popup({ offset: 25 }) // add popups
+          .setHTML('<h3>Description</h3><p>Location data</p>')) // Replace with your description and location data
+        .addTo(map);
     });
 
     // Remove popup after zoom level 13
