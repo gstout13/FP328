@@ -132,7 +132,8 @@
                     {
                       "type": "Feature",
                       "properties": {
-                        "description": "Example Place 1"
+                        "description": "Example Place 1",
+                        "location": "Location 1"
                       },
                       "geometry": {
                         "type": "Point",
@@ -142,7 +143,8 @@
                     {
                       "type": "Feature",
                       "properties": {
-                        "description": "Example Place 2"
+                        "description": "Example Place 2",
+                        "location": "Location 2"
                       },
                       "geometry": {
                         "type": "Point",
@@ -170,6 +172,7 @@
             map.on('click', 'places-layer', function (e) {
               var coordinates = e.features[0].geometry.coordinates.slice();
               var description = e.features[0].properties.description;
+              var location = e.features[0].properties.location;
 
               // Ensure that if the map is zoomed out such that multiple
               // copies of the feature are visible, the popup appears
@@ -180,7 +183,7 @@
 
               new maplibregl.Popup()
                 .setLngLat(coordinates)
-                .setHTML("<p>" + description + "</p>")
+                .setHTML("<p><b>Description:</b> " + description + "<br><b>Location:</b> " + location + "</p>")
                 .addTo(map);
             });
 
@@ -468,6 +471,25 @@
         }
       });
 
+      // Check if the layer exists before adding it.
+      if (map.getLayer('places-layer')) {
+        // The layer already exists, so we avoid adding it again.
+        console.log("Layer 'places-layer' already exists.");
+      } else {
+        // Add the layer to the map.
+        map.addLayer({
+          id: 'places-layer',
+          type: 'circle',
+          source: 'places', // this needs to match the source id
+          paint: {
+            'circle-color': '#B42222',
+            'circle-radius': 4,
+            'circle-stroke-width': 1,
+            'circle-stroke-color': '#000000'
+          }
+        });
+      }
+
       // Add a marker with a popup
       var marker = new maplibregl.Marker()
         .setLngLat([longitude, latitude]) // Replace with your coordinates
@@ -476,10 +498,9 @@
         .addTo(map);
 
       // Show popup on click over an existing point
-      map.on('click', 'placesLayer', function (e) {
+      map.on('click', 'places-layer', function (e) {
         var coordinates = e.features[0].geometry.coordinates.slice();
-        var content = e.features[0].properties.content;
-        var contributor = e.features[0].properties.contributor;
+        var description = e.features[0].properties.description;
 
         // Ensure that if the map is zoomed out such that multiple
         // copies of the feature are visible, the popup appears
@@ -490,17 +511,17 @@
 
         new maplibregl.Popup()
           .setLngLat(coordinates)
-          .setHTML("<p><b>" + contributor + "</b> <i>said:</i> " + content + "</p>")
+          .setHTML("<p>" + description + "</p>")
           .addTo(map);
       });
 
-      // Change the cursor to a pointer when the mouse is over the placesLayer
-      map.on('mouseenter', 'placesLayer', function () {
+      // Change the cursor to a pointer when the mouse is over the places-layer
+      map.on('mouseenter', 'places-layer', function () {
         map.getCanvas().style.cursor = 'pointer';
       });
 
       // Change it back to a pointer when it leaves.
-      map.on('mouseleave', 'placesLayer', function () {
+      map.on('mouseleave', 'places-layer', function () {
         map.getCanvas().style.cursor = '';
       });
     });
