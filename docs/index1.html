@@ -5,6 +5,7 @@
   <title>ICE Incident Report Mapping Project</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- MapLibre GL CSS -->
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <link href="https://unpkg.com/maplibre-gl@3.1.0/dist/maplibre-gl.css" rel="stylesheet" />
   <style>
     /* Basic CSS for the page */
@@ -118,8 +119,81 @@
       container: 'map',
       style: 'https://api.maptiler.com/maps/streets-v2/style.json?key=Cusoe5zmfmn26glFoeoe',
       center: [-122.3321, 47.6062],
-      zoom: 12
+      zoom: 10
     });
+
+    map.on('load', () => { // Add source and layer once the map is loaded
+            // Add the source first
+            map.addSource('places', {
+                type: 'geojson',
+                data: {
+                  "type": "FeatureCollection",
+                  "features": [
+                    {
+                      "type": "Feature",
+                      "properties": {
+                        "description": "Example Place 1"
+                      },
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [-74.5, 40]
+                      }
+                    },
+                    {
+                      "type": "Feature",
+                      "properties": {
+                        "description": "Example Place 2"
+                      },
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [-75.0, 39.5]
+                      }
+                    }
+                  ]
+                }
+            });
+
+            // Only after we added the source, we add the layer
+            map.addLayer({
+                id: 'places-layer',
+                type: 'circle',
+                source: 'places', // this needs to match the source id
+                paint: {
+                    'circle-color': '#B42222',
+                    'circle-radius': 4,
+                    'circle-stroke-width': 1,
+                    'circle-stroke-color': '#000000'
+                }
+            });
+
+            // Add click event listener for the places-layer
+            map.on('click', 'places-layer', function (e) {
+              var coordinates = e.features[0].geometry.coordinates.slice();
+              var description = e.features[0].properties.description;
+
+              // Ensure that if the map is zoomed out such that multiple
+              // copies of the feature are visible, the popup appears
+              // over the copy being pointed to.
+              while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+              }
+
+              new maplibregl.Popup()
+                .setLngLat(coordinates)
+                .setHTML("<p>" + description + "</p>")
+                .addTo(map);
+            });
+
+            // Change the cursor to a pointer when the mouse is over the places-layer
+            map.on('mouseenter', 'places-layer', function () {
+              map.getCanvas().style.cursor = 'pointer';
+            });
+
+            // Change it back to a pointer when it leaves.
+            map.on('mouseleave', 'places-layer', function () {
+              map.getCanvas().style.cursor = '';
+            });
+        });
 
     // Initialize an empty GeoJSON object for contributions
     let geojson = {
