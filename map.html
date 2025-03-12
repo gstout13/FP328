@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ICE Incident Report Mapping Project</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- MapLibre GL CSS -->
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@3.1.0/dist/maplibre-gl.css" rel="stylesheet" />
+  <style>
+    /* Basic CSS for the page */
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+    }
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 350px;
+      margin: 10px;
+      padding: 10px;
+      background-color: #ffffff;
+      border-radius: 5px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #000000;
+      z-index: 2;
+    }
+    #popup {
+      padding: 10px;
+    }
+    /* Style inputs */
+    #description, #location {
+      width: 100%;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    #submit {
+      float: right;
+    }
+    /* Table container always visible */
+    #data-table {
+      display: block;
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+      z-index: 2;
+      width: 350px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 12px;
+    }
+    #data-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #data-table th, #data-table td {
+      border: 1px solid #ccc;
+      padding: 4px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <!-- Map Container -->
+  <div id="map"></div>
+  
+  <!-- Information Box -->
+  <div id="info">
+    <h3>ICE Incident Report Heatmap</h3>
+    <h4>GDS | University of Washington</h4>
+    <p>
+      The intention of this map is to allow users to contribute to a spatial database 
+      of reported ICE encounters within the United States, enabling better tracking of 
+      potentially dangerous or illicit treatment of residents. Incidents are reported as 
+      red dots within the heatmap with additional heading, description, and date/time details.
+      Please see the following for further resources to help stop illegal searches and seizures:
+      <br>
+      <i>Last update: March 10th, 2025</i>
+    </p>
+  </div>
+  
+  <!-- Data Table Container -->
+  <div id="data-table">
+    <h4>Reported Sightings (Visible Area)</h4>
+    <table id="contribution-table">
+      <thead>
+        <tr>
+          <th>Location</th>
+          <th>Description</th>
+          <th>Date &amp; Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Visible records will be inserted here -->
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- MapLibre GL JS -->
+  <script src="https://unpkg.com/maplibre-gl@3.1.0/dist/maplibre-gl.js"></script>
+  <script>
+    // Global variable for popup
+    let popup = null;
+
+    // Initialize the map
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: 'https://api.maptiler.com/maps/streets-v2/style.json?key=Cusoe5zmfmn26glFoeoe',
+      center: [-122.3321, 47.6062],
+      zoom: 10
+    });
+
+    map.on('load', () => {
+      // Add source and layer once the map is loaded
+      map.addSource('places', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: []
+        }
+      });
+
+      map.addLayer({
+        id: 'places-layer',
+        type: 'circle',
+        source: 'places',
+        paint: {
+          'circle-color': '#B42222',
+          'circle-radius': 4,
+          'circle-stroke-width': 1,
+          'circle-stroke-color': '#000000'
+        }
+      });
+
+      // Add click event listener for the places-layer
+      map.on('click', 'places-layer', function (e) {
+        var coordinates = e.features[0].geometry.coordinates.slice();
+        var description = e.features[0].properties.content;
+        var location = e.features[0].properties.contributor;
+
+        // Ensure that if the map is zoomed out such that multiple
+        // copies of the feature are visible, the popup appears
+        // over the copy being pointed to.
+        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+          coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        }
+
+        new maplibregl.Popup()
+          .setLngLat(coordinates)
+          .setHTML("<p><b>Description:</b> " + description + "<br><b>Location:</b> " + location + "</p>")
+          .addTo(map);
+
+        // Add the clicked feature to the table
+        const tableBody = document.getElementById('contribution-table').getElementsByTagName('tbody')[0];
+        const newRow = document.createElement('tr');
+        newRow.setAttribute('data-feature-id', e.features[0].properties.id); // Set feature ID attribute
+
+        const locationCell = document.createElement('td');
+        locationCell.textContent = location;
+        newRow.appendChild(locationCell);
+
+        const descriptionCell = document.createElement('td');
+        descriptionCell.textContent = description;
+        newRow.appendChild(descriptionCell);
+
+        const dateTimeCell = document.createElement('td');
+        dateTimeCell.textContent = new Date().toISOString(); // Use current date/time
+        newRow.appendChild(dateTimeCell);
+
+        tableBody.appendChild(newRow);
+
+        // Store the clicked feature to the server
+        const newRecord = new URLSearchParams();
+        newRecord.append('contributor', location);
+        newRecord.append('content', description);
+        newRecord.append('datetime', new Date().toISOString());
+        newRecord.append('lng', coordinates[0]);
+        newRecord.append('lat', coordinates[1]);
+
+        const settings = {
+          method: 'POST',
+          body: newRecord
+        };
+
+        fetch('https://finalproject328-8bfb306704ea.herokuapp.com/api/add-record', settings)
+          .catch(err => console.error(err));
+      });
+
+      // Change the cursor to a pointer when the mouse is over the places-layer
+      map.on('mouseenter', 'places-layer', function () {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+
+      // Change it back to a pointer when it leaves.
+      map.on('mouseleave', 'places-layer', function () {
+        map.getCanvas().style.cursor = '';
+      });
+
+      // Add event listeners to table rows
+      document.getElementById('contribution-table').addEventListener('click', function (e) {
+        const row = e.target.closest('tr');
+        if (row) {
+          const featureId = row.getAttribute('data-feature-id');
+          if (featureId) {
+            const feature = geojson.features.find(f => f.properties.id === featureId);
+            if (feature) {
+              const coordinates = feature.geometry.coordinates.slice();
+              const description = feature.properties.content;
+              const location = feature.properties.contributor;
+
+              // Ensure that if the map is zoomed out such that multiple
+              // copies of the feature are visible, the popup appears
+              // over the copy being pointed to.
+              while (Math.abs(map.getCenter().lng - coordinates[0]) > 180) {
+                coordinates[0] += map.getCenter().lng > coordinates[0] ? 360 : -360;
+              }
+
+              new maplibregl.Popup()
+                .setLngLat(coordinates)
+                .setHTML("<p><b>Description:</b> " + description + "<br><b>Location:</b> " + location + "</p>")
+                .addTo(map);
+
+              map.flyTo({ center: coordinates });
+            }
+          }
+        }
+      });
+    });
+
+    // Initialize an empty GeoJSON object for contributions
+    let geojson = {
+      type: 'FeatureCollection',
+      features: []
+    };
+
+    // Function to update the contribution table with visible features only
+    function updateVisibleTable() {
+      const bounds = map.getBounds(); // current map bounds
+      const tableBody = document.getElementById('contribution-table').getElementsByTagName('tbody')[0];
+      tableBody.innerHTML = ""; // Clear existing table rows
+
+      geojson.features.forEach((feature, index) => {
+        const coords = feature.geometry.coordinates;
+        const point = { lng: coords[0], lat: coords[1] };
+        if (bounds.contains(point) && feature.properties.contributor && feature.properties.content && feature.properties.datetime) {
+          const newRow = document.createElement('tr');
+          newRow.setAttribute('data-feature-id', feature.properties.id); // Set feature ID attribute
+
+          const nameCell = document.createElement('td');
+          nameCell.textContent = feature.properties.contributor;
+          newRow.appendChild(nameCell);
+
+          const messageCell = document.createElement('td');
+          messageCell.textContent = feature.properties.content;
+          newRow.appendChild(messageCell);
+
+          const dateTimeCell = document.createElement('td');
+          dateTimeCell.textContent = feature.properties.datetime;
+          newRow.appendChild(dateTimeCell);
+
+          tableBody.appendChild(newRow);
+        }
+      });
+    }
+
+    // Fetch existing records from the server on window load
+    window.addEventListener("load", async function () {
+      try {
+        const response = await fetch('https://finalproject328-8bfb306704ea.herokuapp.com/api/get-record');
+        const data = await response.json();
+        data.rows.forEach((record, index) => {
+          geojson.features.push({
+            type: 'Feature',
+            properties: {
+              id: index.toString(), // Assign a unique ID to each feature
+              contributor: record.contributor,
+              content: record.content,
+              datetime: record.datetime || "" // assume backend returns datetime or empty
+            },
+            geometry: {
+              type: 'Point',
+              coordinates: [record.lng, record.lat]
+            }
+          });
+        });
+        if (map.getSource('places')) {
+          map.getSource('places').setData(geojson);
+        }
+        updateVisibleTable();
+      } catch (error) {
+        console.error("Error fetching records:", error);
+      }
+    });
+
+    // When the map loads, add the sources and layers
+    map.on('load', function () {
+      map.addSource('heatmap', {
+        type: 'geojson',
+        data: geojson
+      });
+
+      map.addLayer({
+        id: 'heatmapLayer',
+        type: 'heatmap',
+        source: 'heatmap',
+        maxzoom: 15,
+        paint: {
+          'heatmap-weight': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 1],
+          'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 5],
+          'heatmap-color': [
+            'interpolate',
+            ['linear'],
+            ['heatmap-density'],
+            0, 'rgba(128,0,128,0)', // Purple
+            0.2, 'rgb(75,0,130)',   // Indigo
+            0.4, 'rgb(0,0,255)',    // Blue
+            0.6, 'rgb(0,191,255)',  // Deep Sky Blue
+            0.8, 'rgb(135,206,250)',// Light Sky Blue
+            1, 'rgb(240,248,255)'   // Alice Blue
+          ],
+          'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 15, 30],
+          'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 7, 1, 15, 0]
+        }
+      });
+    });
+
+    // On map click, show a popup to allow user contribution
+    map.on('click', function (e) {
+      if (popup) {
+        popup.remove();
+        popup = null;
+      }
+      const popupContent = '<div id="popup">' +
+                           '<input type="text" id="description" placeholder="Input description here...">' +
+                           '<input type="text" id="location" placeholder="Input location here...">' +
+                           '<input type="datetime-local" id="datetime">' +
+                           '<button id="submit">submit</button></div>';
+      popup = new maplibregl.Popup({ closeOnClick: true })
+        .setLngLat(e.lngLat)
+        .setHTML(popupContent)
+        .addTo(map);
+      document.getElementById('submit').addEventListener('click', submitNewRecord);
+      e.preventDefault();
+    });
+
+    // Update the visible table on every moveend (pan/zoom)
+    map.on('moveend', function () {
+      updateVisibleTable();
+    });
+
+    // Function to submit a new record
+    async function submitNewRecord() {
+      const contributor = document.getElementById('location').value;
+      const content = document.getElementById('description').value;
+      // If datetime is not provided, use the current date/time in ISO format
+      let datetimeInput = document.getElementById('datetime').value;
+      if (!datetimeInput) {
+        datetimeInput = new Date().toISOString();
+      }
+      const lngLat = popup.getLngLat();
+      const newRecord = new URLSearchParams();
+      newRecord.append('contributor', contributor);
+      newRecord.append('content', content);
+      newRecord.append('datetime', datetimeInput);
+      newRecord.append('lng', lngLat.lng);
+      newRecord.append('lat', lngLat.lat);
+
+      const settings = {
+        method: 'POST',
+        body: newRecord
+      };
+
+      try {
+        await fetch('https://finalproject328-8bfb306704ea.herokuapp.com/api/add-record', settings);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        popup.remove();
+        popup = null;
+        // Add the new record to geojson
+        geojson.features.push({
+          type: 'Feature',
+          properties: {
+            id: geojson.features.length.toString(), // Assign a unique ID to each new feature
+            contributor: contributor,
+            content: content,
+            datetime: datetimeInput
+          },
+          geometry: {
+            type: 'Point',
+            coordinates: [lngLat.lng, lngLat.lat]
+          }
+        });
+        map.getSource('places').setData(geojson);
+        map.getSource('heatmap').setData(geojson);
+        updateVisibleTable();
+      }
+    }
+  </script>
+</body>
+</html>
